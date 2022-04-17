@@ -96,8 +96,10 @@ class SourceFile(models.Model):
                             null=True,
                             max_length=255,
                             validators=[is_valid_size, is_valid_audio_file])
+    public_id = models.CharField(max_length=255, blank=True, null=True)
+    duration = models.FloatField(blank=True, null=True)
     # Whether the audio track is from a YouTube link import
-    file_url = models.URLField(blank=True, null=True)
+    file_url = models.TextField(blank=True, null=True)
     filename = models.TextField(blank=True, null=True)
     path_on_dropbox = models.TextField(blank=True, null=True)
     is_youtube = models.BooleanField(default=False)
@@ -186,6 +188,7 @@ class SourceTrack(models.Model):
     source_file = models.ForeignKey(SourceFile, blank=True, null=True, on_delete=models.CASCADE)
     # Artist name
     artist = models.CharField(max_length=200)
+    thumb = models.URLField(blank=True, null=True)
     # Title
     title = models.CharField(max_length=200)
     # DateTime when user added the song
@@ -248,11 +251,13 @@ class StaticMix(models.Model):
     # Status of source separation task
     status = models.IntegerField(choices=TaskStatus.choices,
                                  default=TaskStatus.QUEUED)
+    public_id = models.CharField(max_length=255, blank=True, null=True)
+    duration = models.FloatField(blank=True, null=True)
     # Underlying file
     file = models.FileField(upload_to=mix_track_path,
                             max_length=255,
                             blank=True)
-    file_url = models.URLField(blank=True, null=True)
+    file_url = models.TextField(blank=True, null=True)
     filename = models.TextField(blank=True, null=True)
     path_on_dropbox = models.TextField(blank=True, null=True)
     # Error message
@@ -343,36 +348,46 @@ class DynamicMix(models.Model):
     vocals_file = models.FileField(upload_to=mix_track_path,
                                    max_length=255,
                                    blank=True)
-    vocals_url = models.URLField(blank=True, null=True)
+    vocals_url = models.TextField(blank=True, null=True)
     vocals_path = models.TextField(blank=True, null=True)
+    vocals_public_id = models.CharField(max_length=255, blank=True, null=True)
+    vocals_duration = models.FloatField(blank=True, null=True)
 
     # Path to piano file
     piano_file = models.FileField(upload_to=mix_track_path,
                                   max_length=255,
                                   blank=True)
-    piano_url = models.URLField(blank=True, null=True)
+    piano_url = models.TextField(blank=True, null=True)
     piano_path = models.TextField(blank=True, null=True)
+    piano_public_id = models.CharField(max_length=255, blank=True, null=True)
+    piano_duration = models.FloatField(blank=True, null=True)
 
     # Path to accompaniment file
     other_file = models.FileField(upload_to=mix_track_path,
                                   max_length=255,
                                   blank=True)
-    other_url = models.URLField(blank=True, null=True)
+    other_url = models.TextField(blank=True, null=True)
     other_path = models.TextField(blank=True, null=True)
+    other_public_id = models.CharField(max_length=255, blank=True, null=True)
+    other_duration = models.FloatField(blank=True, null=True)
 
     # Path to bass file
     bass_file = models.FileField(upload_to=mix_track_path,
                                  max_length=255,
                                  blank=True)
-    bass_url = models.URLField(blank=True, null=True)
+    bass_url = models.TextField(blank=True, null=True)
     bass_path = models.TextField(blank=True, null=True)
+    bass_public_id = models.CharField(max_length=255, blank=True, null=True)
+    bass_duration = models.FloatField(blank=True, null=True)
+
     # Path to drums file
     drums_file = models.FileField(upload_to=mix_track_path,
                                   max_length=255,
                                   blank=True)
-
-    drums_url = models.URLField(blank=True, null=True)
+    drums_url = models.TextField(blank=True, null=True)
     drums_path = models.TextField(blank=True, null=True)
+    drums_public_id = models.CharField(max_length=255, blank=True, null=True)
+    drums_duration = models.FloatField(blank=True, null=True)
     # Status of source separation task
     status = models.IntegerField(choices=TaskStatus.choices,
                                  default=TaskStatus.QUEUED)

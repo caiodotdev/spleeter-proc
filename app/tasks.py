@@ -8,10 +8,10 @@ from billiard.exceptions import SoftTimeLimitExceeded
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
-
 from django_celery_results.models import TaskResult
+
 from .celery import app
-from .dropbox_uploader.core import upload_file, get_path_on_dropbox, download_file, make_url
+from .cloudinary_api import download_file, upload_audio
 from .models import (DynamicMix, StaticMix, TaskStatus)
 from .separators.spleeter_separator import SpleeterSeparator
 from .util import get_valid_filename
@@ -86,21 +86,27 @@ def static_mix_processing(static_mix_id):
         }
 
         # Download music original to directory created (media/separated/id/upload/)
-        metadata, res = download_file(path_original, static_mix.source_track.source_file.path_on_dropbox)
+        download_file(path_original, static_mix.source_track.source_file.file_url)
+        # metadata, res = download_file(path_original, static_mix.source_track.source_file.path_on_dropbox)
         # Criar Static Mix na pasta (/media/separate/id/)
-        if res and metadata and os.path.exists(path_original):
+        if os.path.exists(path_original):
             separator.create_static_mix(parts, path_original, rel_path)
 
         # Check file exists
         if os.path.exists(rel_path):
             # Upload to Dropbox da Static Mix
-            path_on_dropbox = get_path_on_dropbox(filename, 'static_mix')
-            file_url = upload_file(rel_path, path_on_dropbox)
+            # path_on_dropbox = get_path_on_dropbox(filename, 'static_mix')
+            # file_url = upload_file(rel_path, path_on_dropbox)
+            path_on_cloudinary = 'static' + '/' + filename
+            req = upload_audio(rel_path, path_on_cloudinary)
             static_mix.status = TaskStatus.DONE
             static_mix.date_finished = timezone.now()
-            static_mix.file_url = make_url(file_url)
+            # static_mix.file_url = make_url(file_url)
+            static_mix.file_url = req['secure_url']
+            static_mix.public_id = req['public_id']
+            static_mix.duration = req['duration']
             static_mix.filename = filename
-            static_mix.path_on_dropbox = path_on_dropbox
+            # static_mix.path_on_dropbox = path_on_dropbox
             static_mix.save()
             print('Dropbox on ', static_mix.path_on_dropbox)
             # Remove Folders
@@ -152,15 +158,16 @@ def dynamic_mix_processing(dynamic_mix_id):
                                   settings.CPU_SEPARATION)
 
         # Download music original to directory created (media/separated/id/upload/)
-        metadata, res = download_file(path_original, dynamic_mix.source_track.source_file.path_on_dropbox)
+        # metadata, res = download_file(path_original, dynamic_mix.source_track.source_file.path_on_dropbox)
+        download_file(path_original, dynamic_mix.source_track.source_file.file_url)
         # Criar Static Mix na pasta (/media/separate/id/)
-        if res:
+        if os.path.exists(path_original):
             separator.separate_into_parts(path_original, rel_path)
 
         # Check all parts exist
         if exists_all_parts(rel_path):
             rename_all_parts(rel_path, file_prefix, file_suffix)
-            upload_all_parts(directory, dynamic_mix, dynamic_mix_id, rel_path, file_prefix, file_suffix)
+            upload_all_parts(directory, dynamic_mix, rel_path, file_prefix, file_suffix)
             dynamic_mix.status = TaskStatus.DONE
             dynamic_mix.date_finished = timezone.now()
             dynamic_mix.save()
@@ -205,7 +212,7 @@ def rename_all_parts(rel_path, file_prefix: str, file_suffix: str):
         os.rename(old_rel_path, new_rel_path)
 
 
-def upload_all_parts(directory, dynamic_mix, mix_id, rel_path, file_prefix: str, file_suffix: str):
+def upload_all_parts(directory, dynamic_mix, rel_path, file_prefix: str, file_suffix: str):
     filenames = {
         'vocals': f'{file_prefix}_vocals_{file_suffix}.mp3',
         'piano': f'{file_prefix}_piano_{file_suffix}.mp3',
@@ -215,29 +222,31 @@ def upload_all_parts(directory, dynamic_mix, mix_id, rel_path, file_prefix: str,
     }
     for part in filenames.keys():
         filename = filenames[part]
-        dir_filename = f'{mix_id}/{filename}'
-        path_on_dropbox = get_path_on_dropbox(dir_filename, 'dynamic_mix')
+        path_on_cloudinary = 'dynamic' + '/' + file_prefix + '/' + filename
         part_file_path = os.path.join(rel_path, filename)
         print(f'Upload part {part}: {part_file_path}')
-        part_file_url = upload_file(part_file_path, path_on_dropbox)
+        req = upload_audio(part_file_path, path_on_cloudinary)
         if part == 'vocals':
-            dynamic_mix.vocals_url = make_url(part_file_url)
-            dynamic_mix.vocals_path = path_on_dropbox
+            dynamic_mix.vocals_url = req['secure_url']
+            dynamic_mix.vocals_public_id = req['public_id']
+            dynamic_mix.vocals_duration = req['duration']
         elif part == 'piano':
-            dynamic_mix.piano_url = make_url(part_file_url)
-            dynamic_mix.piano_path = path_on_dropbox
+            dynamic_mix.piano_url = req['url']
+            dynamic_mix.piano_public_id = req['public_id']
+            dynamic_mix.piano_duration = req['duration']
         elif part == 'bass':
-            dynamic_mix.bass_url = make_url(part_file_url)
-            dynamic_mix.bass_path = path_on_dropbox
+            dynamic_mix.bass_url = req['url']
+            dynamic_mix.bass_public_id = req['public_id']
+            dynamic_mix.bass_duration = req['duration']
         elif part == 'drums':
-            dynamic_mix.drums_url = make_url(part_file_url)
-            dynamic_mix.drums_path = path_on_dropbox
+            dynamic_mix.drums_url = req['url']
+            dynamic_mix.drums_public_id = req['public_id']
+            dynamic_mix.drums_duration = req['duration']
         else:
-            dynamic_mix.other_url = make_url(part_file_url)
-            dynamic_mix.other_path = path_on_dropbox
-    dynamic_mix.folder_path_on_dropbox = f'/dynamic_mix/{mix_id}/'
+            dynamic_mix.other_url = req['url']
+            dynamic_mix.other_public_id = req['public_id']
+            dynamic_mix.other_duration = req['duration']
     shutil.rmtree(directory, ignore_errors=True)
-
 
 
 @shared_task()

@@ -2,6 +2,7 @@ asgiref==3.5.0
 awesomeversion==21.2.3
 billiard==3.6.4.0
 cryptography==3.3.2
+cloudinary
 dj-database-url==0.5.0
 Django==3.2.12
 django-cors-headers==3.7.0

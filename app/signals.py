@@ -1,12 +1,8 @@
-import os
-import shutil
-
-from django.conf import settings
 from django.db.models.signals import post_delete, pre_delete
 from django.dispatch import receiver
 
-from .dropbox_uploader.core import delete_file_on_dropbox
-from .models import DynamicMix, SourceFile, SourceTrack, StaticMix
+from app.cloudinary_api import remove_cloudinary_file
+from app.models import DynamicMix, SourceFile, SourceTrack, StaticMix
 
 """
 This module defines pre- and post-delete signals to ensure files are deleted when a model is deleted from the DB.
@@ -17,53 +13,35 @@ This module defines pre- and post-delete signals to ensure files are deleted whe
           sender=SourceFile,
           dispatch_uid='delete_source_file_signal')
 def delete_source_file(sender, instance, using, **kwargs):
-    """Pre-delete signal to delete source file on disk before deleting instance."""
-    if instance.file:
-        instance.file.delete()
-
-    # Delete directory
     if str(instance.id):
-        directory = os.path.join(settings.MEDIA_ROOT, settings.UPLOAD_DIR,
-                                 str(instance.id))
-        shutil.rmtree(directory, ignore_errors=True)
-        print('Removed directory: ', directory)
-        delete_file_on_dropbox(instance.path_on_dropbox)
-
-    if instance.youtube_fetch_task:
-        instance.youtube_fetch_task.delete()
+        remove_cloudinary_file(instance.public_id)
+        # delete_file_on_dropbox(instance.path_on_dropbox)
 
 
 @receiver(post_delete,
           sender=SourceTrack,
           dispatch_uid='delete_source_track_signal')
 def delete_source_track(sender, instance, using, **kwargs):
-    """Post-delete signal to source track file on disk before deleting instance."""
+    print(instance.source_file)
     if instance.source_file:
-        # This will call delete_source_file above
-        instance.source_file.delete()
-        delete_file_on_dropbox(instance.source_file.path_on_dropbox)
+        qs = SourceTrack.objects.filter(source_file__file_url=instance.source_file.file_url)
+        print(qs)
+        if qs.all().count() == 0:
+            remove_cloudinary_file(instance.source_file.public_id)
+            instance.source_file.delete()
+
+            # delete_file_on_dropbox(instance.source_file.path_on_dropbox)
 
 
 @receiver(pre_delete,
           sender=StaticMix,
           dispatch_uid='delete_static_mix_signal')
 def delete_static_mix(sender, instance, using, **kwargs):
-    """
-    Pre-delete signal to static mix file on disk before deleting instance.
-
-    Cannot be post-delete or else submitting a separation task with 'overwrite' flag does
-    not work.
-    """
-    if instance.file:
-        instance.file.delete()
-
-    # Delete directory
     if str(instance.id):
-        directory = os.path.join(settings.MEDIA_ROOT, settings.SEPARATE_DIR,
-                                 str(instance.id))
-        shutil.rmtree(directory, ignore_errors=True)
-        print('Removed directory: ', directory)
-        delete_file_on_dropbox(instance.path_on_dropbox)
+        qs = StaticMix.objects.filter(file_url=instance.file_url)
+        if qs.all().count() == 1:
+            remove_cloudinary_file(instance.public_id)
+            # delete_file_on_dropbox(instance.path_on_dropbox)
 
 
 @receiver(pre_delete,
@@ -71,16 +49,16 @@ def delete_static_mix(sender, instance, using, **kwargs):
           dispatch_uid='delete_dynamic_mix_signal')
 def delete_dynamic_mix(sender, instance, using, **kwargs):
     if instance.vocals_url:
-        delete_file_on_dropbox(instance.vocals_path)
-        delete_file_on_dropbox(instance.piano_path)
-        delete_file_on_dropbox(instance.other_path)
-        delete_file_on_dropbox(instance.drums_path)
-        delete_file_on_dropbox(instance.bass_path)
-        delete_file_on_dropbox(instance.folder_path_on_dropbox)
-
-    # Delete directory
-    if str(instance.id):
-        directory = os.path.join(settings.MEDIA_ROOT, settings.SEPARATE_DIR,
-                                 str(instance.id))
-        shutil.rmtree(directory, ignore_errors=True)
-        print('Removed directory: ', directory)
+        qs = DynamicMix.objects.filter(vocals_url=instance.vocals_url)
+        if qs.all().count() == 1:
+            remove_cloudinary_file(instance.vocals_public_id)
+            remove_cloudinary_file(instance.piano_public_id)
+            remove_cloudinary_file(instance.other_public_id)
+            remove_cloudinary_file(instance.bass_public_id)
+            remove_cloudinary_file(instance.drums_public_id)
+            # delete_file_on_dropbox(instance.vocals_path)
+            # delete_file_on_dropbox(instance.piano_path)
+            # delete_file_on_dropbox(instance.other_path)
+            # delete_file_on_dropbox(instance.drums_path)
+            # delete_file_on_dropbox(instance.bass_path)
+            # delete_file_on_dropbox(instance.folder_path_on_dropbox)

@@ -35,7 +35,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'clean-every-minute': {
         'task': 'app.tasks.clean_tasks_results',
-        'schedule': crontab(minute="*/1"),
+        'schedule': crontab(minute="*/15"),
     },
 }
 
@@ -119,6 +119,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_beat',
     'django_celery_results',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -220,3 +221,11 @@ REST_KNOX = {
 
 API_KEY_DROPBOX = os.getenv('API_KEY_DROPBOX', 'M6iN1nYzh_YAAAAAAACUfhWR5kFUT-4Hwak6aAwSANv5vP0tLCHmnHCi37y9acqY')
 TOKEN_DROPBOX = os.getenv('TOKEN_DROPBOX', 'M6iN1nYzh_YAAAAAAACUfhWR5kFUT-4Hwak6aAwSANv5vP0tLCHmnHCi37y9acqY')
+
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', 'cloudinary://977733565746842:q552mjrVeEmgPs1kUxfKzp4wz2o@freelancerinc')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY',
+                               '977733565746842')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET',
+                                  'q552mjrVeEmgPs1kUxfKzp4wz2o')
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME',
+                                  'freelancerinc')
