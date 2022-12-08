@@ -231,19 +231,19 @@ def upload_all_parts(directory, dynamic_mix, rel_path, file_prefix: str, file_su
             dynamic_mix.vocals_public_id = req['public_id']
             dynamic_mix.vocals_duration = req['duration']
         elif part == 'piano':
-            dynamic_mix.piano_url = req['url']
+            dynamic_mix.piano_url = req['secure_url']
             dynamic_mix.piano_public_id = req['public_id']
             dynamic_mix.piano_duration = req['duration']
         elif part == 'bass':
-            dynamic_mix.bass_url = req['url']
+            dynamic_mix.bass_url = req['secure_url']
             dynamic_mix.bass_public_id = req['public_id']
             dynamic_mix.bass_duration = req['duration']
         elif part == 'drums':
-            dynamic_mix.drums_url = req['url']
+            dynamic_mix.drums_url = req['secure_url']
             dynamic_mix.drums_public_id = req['public_id']
             dynamic_mix.drums_duration = req['duration']
         else:
-            dynamic_mix.other_url = req['url']
+            dynamic_mix.other_url = req['secure_url']
             dynamic_mix.other_public_id = req['public_id']
             dynamic_mix.other_duration = req['duration']
     shutil.rmtree(directory, ignore_errors=True)
